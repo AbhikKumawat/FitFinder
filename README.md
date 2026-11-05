@@ -239,30 +239,4 @@ const amazonResults = await fetch(
 
 ---
 
-## 🤝 Contributing
 
-Contributions are welcome! Please open an issue first to discuss what you'd like to change.
-
-```bash
-# Fork the repo, then:
-git checkout -b feature/your-feature-name
-git commit -m "feat: add your feature"
-git push origin feature/your-feature-name
-# Open a Pull Request
-```
-
----
-
-## 📄 License
-
-This project is licensed under the **MIT License**.
-
----
-
-<div align="center">
-
-Built with ❤️ by [Abhik Kumawat](https://github.com/AbhikKumawat)
-
-⭐ **Star this repo** if FitFinder helped you!
-
-</div>
