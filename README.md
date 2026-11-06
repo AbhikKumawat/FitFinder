@@ -26,6 +26,17 @@ You enter your body measurements once. FitFinder's AI agents then search across 
 
 ---
 
+## 🤖 New: LangGraph Multi-Agent Architecture (`fitfinder-langgraph/`)
+
+Looking for the production-grade multi-agent implementation? Check out the **[`fitfinder-langgraph/`](./fitfinder-langgraph/)** directory!
+
+- **LangGraph `StateGraph`**: 6 retailer nodes execute in parallel fan-out.
+- **Google Gemini 1.5 LLM**: Real-time garment fit scoring based on user's exact body measurements.
+- **FastAPI Backend**: Exposes `/api/search` and Server-Sent Events (SSE) `/api/search/stream` for live agent logs.
+- **Dedicated Frontend**: React 18 + TypeScript + Vite + Tailwind client connected to the LangGraph graph.
+
+---
+
 ## 🚀 Features
 
 ### 🤖 AI-Powered Search
