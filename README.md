@@ -1,253 +1,150 @@
-<div align="center">
+# FitFinder — LangGraph Multi-Agent Architecture 🤖👗
 
-<img src="https://img.shields.io/badge/FitFinder-AI%20Fashion%20Platform-8BC58D?style=for-the-badge&logo=sparkles&logoColor=white" alt="FitFinder" />
+An AI-powered fashion sizing and discovery platform built with **LangGraph**, **LangChain**, **Google Gemini**, **FastAPI**, and **React 18 + TypeScript**.
 
-# 🛍️ FitFinder — Your perfect fit, across every brand.
-
-**An AI-powered fashion shopping platform that finds clothes and shoes matching your exact body measurements across Amazon, Myntra, H&M, Zara, Nike, and Adidas.**
-
-[![React](https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react)](https://react.dev)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=flat-square&logo=typescript)](https://typescriptlang.org)
-[![Vite](https://img.shields.io/badge/Vite-8-646CFF?style=flat-square&logo=vite)](https://vitejs.dev)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind-3-06B6D4?style=flat-square&logo=tailwindcss)](https://tailwindcss.com)
-[![License](https://img.shields.io/badge/License-MIT-FFD67E?style=flat-square)](LICENSE)
-
-</div>
+Unlike static search, FitFinder runs a **distributed multi-agent graph** that distributes queries across brand agents simultaneously, analyses garment specs against the user's exact body measurements, and ranks products by personalized fit match.
 
 ---
 
-## ✨ What is FitFinder?
+## 🏗️ Architecture & Agent Graph
 
-FitFinder solves one of the biggest pain points in online fashion shopping — **buying clothes that don't fit**.
+FitFinder uses a **LangGraph `StateGraph`** with parallel fan-out and sequential convergence:
 
-You enter your body measurements once. FitFinder's AI agents then search across multiple fashion platforms, analyse each product's sizing data, and recommend the **exact size** that matches your body and preferred fit style — whether that's Slim, Regular, Relaxed, or Oversized.
+```mermaid
+flowchart TD
+    START([User Query + Measurements]) --> PARSER[Query & Price Filter Parser]
+    PARSER --> AMZ[Amazon Agent]
+    PARSER --> MYN[Myntra Agent]
+    PARSER --> HM[H&M Agent]
+    PARSER --> ZARA[Zara Agent]
+    PARSER --> NIKE[Nike Agent]
+    PARSER --> ADI[Adidas Agent]
 
-> **"Stop returning clothes. Start buying clothes that actually fit you."**
+    AMZ --> FIT[Fit Analysis Agent - Gemini LLM]
+    MYN --> FIT
+    HM --> FIT
+    ZARA --> FIT
+    NIKE --> FIT
+    ADI --> FIT
 
----
+    FIT --> RANK[Ranking & Deduplication Agent]
+    RANK --> END([Ranked Products + Fit Matches + Summary])
 
-## 🤖 New: LangGraph Multi-Agent Architecture (`fitfinder-langgraph/`)
+    classDef agent fill:#23242C,stroke:#7866D9,stroke-width:2px,color:#FFFFFF;
+    classDef llm fill:#23242C,stroke:#8BC58D,stroke-width:2px,color:#FFFFFF;
+    classDef startend fill:#17181D,stroke:#FFD67E,stroke-width:2px,color:#FFFFFF;
 
-Looking for the production-grade multi-agent implementation? Check out the **[`fitfinder-langgraph/`](./fitfinder-langgraph/)** directory!
+    class AMZ,MYN,HM,ZARA,NIKE,ADI,RANK,PARSER agent;
+    class FIT llm;
+    class START,END startend;
+```
 
-- **LangGraph `StateGraph`**: 6 retailer nodes execute in parallel fan-out.
-- **Google Gemini 1.5 LLM**: Real-time garment fit scoring based on user's exact body measurements.
-- **FastAPI Backend**: Exposes `/api/search` and Server-Sent Events (SSE) `/api/search/stream` for live agent logs.
-- **Dedicated Frontend**: React 18 + TypeScript + Vite + Tailwind client connected to the LangGraph graph.
+### 🧠 The Agents
 
----
-
-## 🚀 Features
-
-### 🤖 AI-Powered Search
-- Type natural language queries like `"black jeans under ₹2,000 that fit me"`
-- Parses **price ranges** automatically — `under ₹X`, `between X and Y`, `above X`, `X to Y`
-- Strips filler words and extracts real keywords
-- Simulates **5 specialised agents** running in parallel:
-  - 🛒 **Amazon Agent** — searches product catalogue
-  - 🛍️ **Myntra Agent** — compares size charts
-  - 👔 **H&M Agent** — analyses garment measurements
-  - 📐 **Fit Agent** — calculates personalised size
-  - 🏆 **Ranking Agent** — scores and ranks results by fit confidence
-- Results sorted by **Fit Match %** (best fit first)
-- Smart **"No results"** empty state with one-tap retry without price filter
-
-### 👗 Personalised Fit Scoring
-- Each product shows a **circular Fit Match badge** (e.g. 96%)
-- Full fit breakdown on product page:
-  - Your chest measurement vs garment chest
-  - Preferred fit style comparison
-  - Plain-English explanation of why a size is recommended
-- AI-recommended size highlighted with a badge in the size selector
-
-### 📐 Body Measurement Profile
-- Enter 6 measurements: Height, Chest, Waist, Hips, Shoulders, Foot Length
-- **cm ↔ inch toggle** with automatic unit conversion
-- Choose your preferred fit style: Slim / Regular / Relaxed / Oversized
-- Profile completion progress bar
-
-### 🛒 Multi-Platform Store Links
-- Every product links directly to the retailer's website
-- "Also available on" quick links — Amazon, Myntra, Flipkart
-- Inline "Visit [Store] ↗" link on every search result card
-
-### 🎨 Premium Dark UI
-- Near-black charcoal background (`#17181D`)
-- Pastel accent palette — Mint, Yellow, Pink, Purple
-- Rounded cards, clean typography (Inter), spacious layouts
-- Smooth hover animations and transitions
-- Fully responsive — desktop three-panel layout + mobile bottom nav
-
-### ❤️ Wishlist
-- Heart-toggle any product from any screen
-- Dedicated Wishlist page
-- Persisted in React state (ready for localStorage / backend)
-
-### 🗂️ Categories & Filters
-- Browse by: Shirts, T-Shirts, Jeans, Trousers, Shoes, Jackets
-- Category filter works across Discover and Categories pages
-- Brand and price filter built into the AI search engine
+| Agent | Technology | Role |
+|---|---|---|
+| **Retailer Agents** (6 nodes) | Python / LangGraph parallel fan-out | Amazon, Myntra, H&M, Zara, Nike, and Adidas agents query their catalogues concurrently in parallel threads. |
+| **Fit Analysis Agent** | Google Gemini 1.5 (`ChatGoogleGenerativeAI`) | Evaluates garment dimensions against user's chest, waist, shoulders, inseam, foot length, and fit preference (Slim/Regular/Relaxed/Oversized) to generate real-time fit scores (0-100%) and tailored explanations. |
+| **Ranking Agent** | LangGraph Node | Deduplicates matching products, sorts by fit score descending, and creates a natural-language search summary. |
 
 ---
 
-## 🏗️ Tech Stack
-
-| Technology | Purpose |
-|---|---|
-| **React 18** | UI library |
-| **TypeScript 5** | Type safety |
-| **Vite 8** | Build tool & dev server |
-| **Tailwind CSS 3** | Utility-first styling |
-| **Lucide React** | Icon library |
-| **Inter (Google Fonts)** | Typography |
-
----
-
-## 📁 Project Structure
+## 📁 Directory Structure
 
 ```
-FitFinder/
-├── public/
-├── src/
-│   ├── components/
-│   │   ├── AgentSearchPanel.tsx   # AI search with agent simulation & price parsing
-│   │   ├── CategoriesPage.tsx     # Browse by category
-│   │   ├── CategoryCard.tsx       # Pastel category cards
-│   │   ├── DiscoverPage.tsx       # Main discovery feed
-│   │   ├── FitProfile.tsx         # User profile & measurements display
-│   │   ├── FitScoreBadge.tsx      # Animated circular fit score ring
-│   │   ├── MeasurementForm.tsx    # Edit measurements with cm/in toggle
-│   │   ├── NavigationBar.tsx      # Desktop sidebar + mobile bottom nav
-│   │   ├── ProductCard.tsx        # 3 variants: featured, list, compact
-│   │   ├── ProductDetails.tsx     # Full product page with size recommendation
-│   │   └── WishlistPage.tsx       # Saved products
-│   ├── data/
-│   │   └── products.ts            # Demo product data + user profile defaults
-│   ├── lib/
-│   │   └── utils.ts               # cn() class merge utility
-│   ├── types/
-│   │   └── index.ts               # TypeScript interfaces
-│   ├── App.tsx                    # Root — layout orchestration
-│   ├── main.tsx                   # Entry point
-│   └── index.css                  # Tailwind base + custom scrollbar styles
-├── tailwind.config.js             # Custom design tokens
-├── index.html
-└── package.json
+fitfinder-langgraph/
+├── backend/
+│   ├── agents/
+│   │   ├── state.py         # SearchState TypedDict with operator.add merging
+│   │   ├── nodes.py         # 6 retailer nodes + Gemini fit node + ranking node
+│   │   ├── graph.py         # StateGraph compilation & edge routing
+│   │   ├── parser.py        # Natural-language query & price range parser
+│   │   └── data.py          # Multi-retailer product catalogue
+│   ├── main.py              # FastAPI server (REST + SSE streaming)
+│   ├── requirements.txt     # Python dependencies
+│   ├── .env.example         # Environment template (GOOGLE_API_KEY)
+│   └── .env                 # Local environment file
+└── frontend/
+    ├── src/
+    │   ├── api/client.ts    # REST & Server-Sent Events (SSE) streaming client
+    │   ├── components/
+    │   │   ├── AgentSearchPanel.tsx # Live agent progress stream & filter chips
+    │   │   ├── DiscoverPage.tsx     # Personalized recommendation feed
+    │   │   ├── FitProfile.tsx       # Measurement editor (cm/in conversion)
+    │   │   └── ProductDetails.tsx   # Detailed garment breakdown & direct store links
+    │   ├── App.tsx          # 3-panel responsive dashboard layout
+    │   └── main.tsx
+    ├── package.json
+    ├── tailwind.config.js   # FitFinder charcoal & pastel color theme
+    └── vite.config.ts
 ```
 
 ---
 
-## ⚡ Getting Started
+## ⚡ Quick Start
 
-### Prerequisites
-- Node.js 18+
-- npm 9+
+### 1. Prerequisites
+- **Python 3.10+** (Python 3.13 tested)
+- **Node.js 18+** & **npm**
 
-### Installation
-
+### 2. Backend Setup
 ```bash
-# 1. Clone the repository
-git clone https://github.com/AbhikKumawat/FitFinder.git
-cd FitFinder
+cd fitfinder-langgraph/backend
 
-# 2. Install dependencies
+# Install Python requirements
+pip install -r requirements.txt
+
+# (Optional) Add your Gemini API key for live LLM sizing analysis:
+# Edit .env and set:
+# GOOGLE_API_KEY=your_actual_key_here
+# If omitted, the Fit Agent gracefully falls back to deterministic rule scoring!
+
+# Start FastAPI server
+python main.py
+```
+The backend will run on **`http://localhost:8000`** with interactive Swagger docs at **`http://localhost:8000/docs`**.
+
+### 3. Frontend Setup
+```bash
+cd fitfinder-langgraph/frontend
+
+# Install dependencies
 npm install
 
-# 3. Start the development server
-npm run dev
+# Start Vite dev server
+npm run dev -- --port 5174
 ```
-
-Open **http://localhost:5173/** in your browser.
-
-### Build for Production
-
-```bash
-npm run build        # Outputs to /dist
-npm run preview      # Preview the production build locally
-```
+The frontend will run on **`http://localhost:5174`**.
 
 ---
 
-## 🎯 How to Use
+## 📡 API Endpoints
 
-### 1. Set Your Measurements
-Click **My Fit** in the navigation → **Update My Measurements**
-Enter your Height, Chest, Waist, Hips, Shoulders, and Foot Length in cm or inches.
-Choose your preferred fit style (Slim / Regular / Relaxed / Oversized).
-
-### 2. Discover Products
-The **Discover** page shows personalised recommendations immediately.
-Browse by category or scroll through the product list.
-
-### 3. AI Search
-Click **Search** or type a query in the search bar and press **Search with AI**.
-
-**Example queries that work:**
-```
-shoes under ₹500
-black jeans under ₹2,000 that fit me
-white shirt for office under ₹1,500
-jacket between 3000 and 8000
-oversized tee above ₹500
-running shoes
-```
-
-### 4. View Product Details
-Click any product to see the full fit breakdown, available sizes, colour options, and product specs.
-Your AI-recommended size is highlighted automatically.
-Click **Visit [Store]** to open the retailer's website directly.
-
-### 5. Wishlist
-Tap the ❤️ heart icon on any product to save it. View saved items in the **Wishlist** tab.
+- `GET /api/health` — Checks status and whether Gemini API key is configured.
+- `GET /api/products` — Returns all demo fashion inventory across 6 brands.
+- `POST /api/search` — Runs the full LangGraph pipeline synchronously:
+  ```json
+  {
+    "query": "running shoes under 15000",
+    "measurements": {
+      "height": 175,
+      "chest": 96,
+      "waist": 82,
+      "hips": 100,
+      "shoulders": 44,
+      "foot_length": 27,
+      "unit": "cm"
+    },
+    "fit_preference": "relaxed"
+  }
+  ```
+- `GET /api/search/stream` — **Server-Sent Events (SSE)** endpoint. Streams `agent_start`, `agent_done`, and `result` events in real-time as each LangGraph node processes.
 
 ---
 
-## 🔌 Adding Real Retailer APIs (Future)
+## 💡 Key Highlights
 
-The architecture is designed for real integrations. To connect a live API:
-
-1. **Replace** the demo data in `src/data/products.ts` with API responses
-2. **Implement** real agent functions in `src/components/AgentSearchPanel.tsx` inside `runSearch()`
-3. **Add** environment variables for API keys in `.env`
-
-Each agent corresponds to one retailer. The UI layer is fully decoupled from the data layer.
-
-```ts
-// Example: Replace mock delay with a real API call
-const amazonResults = await fetch(
-  `https://your-backend.com/api/amazon/search?q=${query}&maxPrice=${maxPrice}`
-).then(r => r.json());
-```
-
----
-
-## 🎨 Design Tokens
-
-| Token | Value | Usage |
-|---|---|---|
-| `bg-primary` | `#17181D` | Main background |
-| `bg-card` | `#23242C` | Card backgrounds |
-| `bg-elevated` | `#2A2B35` | Hover states |
-| `accent-mint` | `#8BC58D` | Primary accent, CTAs, fit scores |
-| `accent-yellow` | `#FFD67E` | Secondary accent, ratings |
-| `accent-pink` | `#F49BC1` | Wishlist, tertiary accent |
-| `accent-purple` | `#7866D9` | AI features, search |
-| `text-primary` | `#FFFFFF` | Headings |
-| `text-secondary` | `#A4A5B1` | Body text |
-| `text-muted` | `#6B6C7A` | Labels, placeholders |
-
----
-
-## 🗺️ Roadmap
-
-- [ ] Real retailer API integrations (Amazon PA API, Myntra, H&M)
-- [ ] User authentication & persistent profiles
-- [ ] Size history and fit feedback after purchase
-- [ ] Image-based body measurement (via camera)
-- [ ] Price drop alerts for wishlisted items
-- [ ] Browser extension for auto-recommending sizes on retailer sites
-- [ ] Mobile app (React Native)
-
----
-
-
+1. **StateGraph Fan-Out/Fan-In**: Retailer search operations execute simultaneously in the graph, reducing search latency.
+2. **Real-time SSE Streaming**: The UI visually updates live as each agent completes its tasks.
+3. **Graceful Fallback**: Works out-of-the-box without an API key in Demo Mode, and automatically upgrades to live Gemini LLM sizing analysis when `GOOGLE_API_KEY` is supplied.
+4. **Natural Language Price & Fit Parsing**: Handles queries like *"black jeans under ₹2,000"*, *"jackets between 3000 and 8000"*, or *"shoes for wide feet"*.
